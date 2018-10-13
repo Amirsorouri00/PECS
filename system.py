@@ -50,17 +50,18 @@ class Queue():
 
 class Process():
     def __init__(self, *args, **kwargs):
-        self.gap_time = self.ExponentialRandom()
+        self.gap_time = self.ExponentialRandom(1)
         self.process_time = 0
         self.exit_time = 0
         self.state = 1000
         self._timeArriveInQueue = 0
+        self.random = random.seed(315)
     
-    def ExponentialRandom(self):
-        return random.randrange(1, 10)
+    def ExponentialRandom(self, rate):
+        return (-math.log10(random.random())/(rate))
     
     def SetRuntime(self):
-        self.process_time = self.ExponentialRandom()
+        self.process_time = self.ExponentialRandom(1.2)
 
 
 class System():
@@ -68,12 +69,16 @@ class System():
         self._outerProcessesQueue = Queue(size)
         self.SetQueue(size)    
         print(self._outerProcessesQueue)
+        self._outerSize = size
         self._nextProcessToInput = self._outerProcessesQueue.dequeue()
         self._serverQueue = Queue(size)
         self._clock = 0
+        self._tmpclock = 0
         self._totalDelay = 0
         self._serverEndTime = 0
         self._numberInQueue = 0
+        self._tmpNumberInQueue = 0
+        self._customersInQueue = 0
         self._serverStatus = 0
         self._totalNumberInQueue = 0
         #self._nextEvent = 'InputOuterEvents'
@@ -142,13 +147,22 @@ class System():
             self._totalNumberInQueue+=self._numberInQueue
             if self._nextEvent == 'InputOuterEvents':
                 #self._clock = self._nextProcessToInput.gap_time + self._clock
-                self._numberInQueue = self._numberInQueue + 1
-                self._nextProcessToInput._timeArriveInQueue = self._clock
-                self._serverQueue.enqueue(self._nextProcessToInput)
-                self._nextProcessToInput = self._outerProcessesQueue.dequeue()
+                if self._outerSize > 2:
+                    self._numberInQueue = self._numberInQueue + 1
+                    self._customersInQueue += (self._tmpNumberInQueue) * (self._clock - self._tmpclock)
+                    self._tmpclock = self._clock
+                    self._tmpNumberInQueue = self._numberInQueue
+                    self._nextProcessToInput._timeArriveInQueue = self._clock
+                    self._serverQueue.enqueue(self._nextProcessToInput)
+                    self._nextProcessToInput = self._outerProcessesQueue.dequeue()
+                    self._outerSize-=1
+                else: continue
             else:
                 self.Server(self._serverQueue.dequeue())
                 self._numberInQueue = self._numberInQueue - 1
+                self._customersInQueue += (self._tmpNumberInQueue) * (self._clock - self._tmpclock)
+                self._tmpclock = self._clock
+                self._tmpNumberInQueue = self._numberInQueue
                 i+=1
             self.Print()
             print('i: '+str(i))
@@ -157,15 +171,17 @@ class System():
         return
             
 
-system = System(5000)
+system = System(40000)
 system._Wq = system._totalDelay/system._served
 system._Es = system._serviceTime/system._served
 system._W = system._Wq + system._Es
 Qt = system._numberInQueue/system._served
+system._Lq = system._customersInQueue/system._clock
 print('Wq: ' + str(system._Wq))
 print('Es: ' + str(system._Es))
 print('W: ' + str(system._W))
-#system._Lq = Qt/system._clock
+print('Lq: ' + str(system._Lq))
+
 
 
 
